@@ -21,3 +21,24 @@ By default, the plugin looks for skeleton structures inside a folder named `_ske
 ```
 
 > Source [https://github.com/obsidianmd/obsidian-sample-plugin](https://github.com/obsidianmd/obsidian-sample-plugin)~
+
+<!-- TBU -->
+<div style="display:none;">
+## Installation
+
+### Method 1: From Obsidian Community Plugins _(recommended)_
+
+> (Coming soon if not yet published. Until then, use Manual method below.)
+
+1. Open Obsidian.
+2. Go to **Settings → Community Plugins → Browse**.
+3. Search for **Skeleton Plugin**.
+4. Click **Install**, then **Enable**.
+
+### Method 2: Manual Installation
+
+1. Download the latest release from the [GitHub repository](https://github.com/yourusername/obsidian-skeleton-plugin/releases).
+2. Extract the contents into your vault’s plugins folder:  
+   `.obsidian/plugins/obsidian-skeleton-plugin/`
+3. Restart Obsidian or reload plugins.
+</div>
