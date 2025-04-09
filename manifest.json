@@ -1,8 +1,8 @@
 {
 	"id": "skeleton-plugin",
 	"name": "Skeleton Plugin",
-	"version": "1.1.0",
-	"minAppVersion": "0.16.0",
+	"version": "2.0.0",
+	"minAppVersion": "0.15.0",
 	"description": "Generate files and folders from skeleton templates",
 	"author": "xHacka",
 	"authorUrl": "http://0",
