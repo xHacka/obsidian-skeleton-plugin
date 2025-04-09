@@ -6,3 +6,39 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.existing-files-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--background-modifier-border);
+    padding: 5px;
+    margin: 10px 0;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.selective-overwrite-instructions {
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.skeleton-info {
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 10px;
+}
+
+.bulk-selection-container {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.bulk-button {
+    font-size: 12px;
+}
