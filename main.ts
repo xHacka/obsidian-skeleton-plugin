@@ -1,134 +1,80 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, FileSystemAdapter, Notice, Plugin, SuggestModal } from "obsidian";
+import * as path from "path";
+import * as fs from "fs";
 
-// Remember to rename these classes and interfaces!
+const SKEL: string = "_skel";
+let BASE_DIR: string = "";
+let SKEL_DIR: string = "";
 
-interface MyPluginSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
-
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
-
+export default class SkeletonPlugin extends Plugin {
 	async onload() {
-		await this.loadSettings();
+		BASE_DIR = (this.app.vault.adapter as FileSystemAdapter).getBasePath();
+		SKEL_DIR = path.join(BASE_DIR, SKEL);
+		if (!fs.existsSync(SKEL_DIR)) {
+			new Notice(`Creating ${SKEL_DIR} directory for skeletons.`);
+			fs.mkdirSync(SKEL_DIR);
+		}
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				menu.addItem((item) => {
+					item.setTitle("Generate Skeleton")
+						.setIcon("lucide-bone")
+						.onClick(async () => {
+							const skeleton_dirs = fs.readdirSync(SKEL_DIR);
+							let selectedPath = path.join(BASE_DIR, file.path);
+							if (fs.statSync(selectedPath).isFile()) {
+								selectedPath = path.dirname(selectedPath);
+							}
+							new SkeletonModal(
+								this.app,
+								skeleton_dirs,
+								selectedPath
+							).open();
+						});
+				});
+			})
+		);
 	}
 
-	onunload() {
-
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+	onunload() {}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
+class SkeletonModal extends SuggestModal<string> {
+	skeletonDirs: string[];
+	selectedDir: string;
+
+	constructor(app: App, dirs: string[], dir: string) {
 		super(app);
+		this.skeletonDirs = dirs;
+		this.selectedDir = dir;
 	}
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
+	getSuggestions(query: string): string[] {
+		return this.skeletonDirs.filter((dir) =>
+			path
+				.relative(BASE_DIR, dir)
+				.toLowerCase()
+				.includes(query.toLowerCase())
+		);
 	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
+	renderSuggestion(dir: string, element: HTMLElement) {
+		element.createEl("div", { text: dir });
 	}
 
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+	onChooseSuggestion(dir: string, event: MouseEvent | KeyboardEvent) {
+		let dest = path.relative(BASE_DIR, this.selectedDir);
+		dest = dest == "" ? "/" : dest;
+		console.log(`Copying ${dir} to ${dest}`);
+		let filePath;
+		for (let file of fs.readdirSync(path.join(SKEL_DIR, dir))) {
+			filePath = path.join(SKEL_DIR, dir, file);
+			if (fs.statSync(filePath).isFile()) {
+				fs.cpSync(filePath, path.join(this.selectedDir, file));
+			} else {
+				fs.cpSync(filePath, this.selectedDir, { recursive: true });
+			}
+		}
 	}
 }

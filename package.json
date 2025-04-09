@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-skeleton-plugin",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "This is a skeleton plugin for Obsidian used to copy file structure over directory.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
