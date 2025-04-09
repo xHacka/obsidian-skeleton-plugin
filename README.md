@@ -1,3 +1,5 @@
 # Obsidian Skeleton Plugin
 
-Copy/Create directory structures from just a click based on already created structures stored inside `_skel` directory.
+Easily copy or create directory structures with a single click, based on predefined templates stored in a dedicated folder.
+
+By default, the plugin looks for skeleton structures inside a folder named `_skel`, but this can be customized from the plugin's settings.
