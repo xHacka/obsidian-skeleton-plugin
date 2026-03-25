@@ -21,10 +21,13 @@ jobs:
 
       - run: bun run build
 
+      - run: zip ${{ github.event.repository.name }}.zip main.js manifest.json styles.css
+
       - uses: softprops/action-gh-release@v2
         with:
           draft: false
           files: |
+            ${{ github.event.repository.name }}.zip
             main.js
             manifest.json
             styles.css
