@@ -6,6 +6,7 @@ export class ConfirmationModal extends Modal {
     title: string;
     message: string;
     onConfirm: (result: boolean) => void;
+    private resolved = false;
     
     constructor(app: App, title: string, message: string, onConfirm: (result: boolean) => void) {
         super(app);
@@ -26,6 +27,7 @@ export class ConfirmationModal extends Modal {
             .setButtonText("Yes")
             .setCta()
             .onClick(() => {
+                this.resolved = true;
                 this.onConfirm(true);
                 this.close();
             });
@@ -33,24 +35,17 @@ export class ConfirmationModal extends Modal {
         new ButtonComponent(buttonContainer)
             .setButtonText("No")
             .onClick(() => {
+                this.resolved = true;
                 this.onConfirm(false);
                 this.close();
             });
-            
-        // contentEl.createEl("style", {
-        //     text: `
-        //         .button-container {
-        //             display: flex;
-        //             justify-content: space-around;
-        //             margin-top: 20px;
-        //         }
-        //     `
-        // });
     }
     
     onClose() {
-        const { contentEl } = this;
-        contentEl.empty();
+        if (!this.resolved) {
+            this.onConfirm(false);
+        }
+        this.contentEl.empty();
     }
 }
 

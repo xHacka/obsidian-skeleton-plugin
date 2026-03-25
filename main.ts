@@ -1,11 +1,8 @@
-// main.ts - Main plugin file
-import { FileSystemAdapter, Notice, Plugin } from "obsidian";
-import { SkeletonPluginSettings, DEFAULT_SETTINGS } from "./settings";
+import { Notice, Plugin, TAbstractFile, TFile, normalizePath } from "obsidian";
+import { SkeletonPluginSettings, DEFAULT_SETTINGS, parseExcludePatterns } from "./settings";
 import { SkeletonSettingTab } from "./settingTab";
 import { SkeletonModal } from "./modals/skeletonModal";
 import { showConfirmationDialog } from "./modals/confirmationModal";
-import * as path from "path";
-import * as fs from "fs";
 
 export default class SkeletonPlugin extends Plugin {
 	settings: SkeletonPluginSettings;
@@ -13,8 +10,16 @@ export default class SkeletonPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Add settings tab
 		this.addSettingTab(new SkeletonSettingTab(this.app, this));
+
+		this.addCommand({
+			id: "generate-skeleton",
+			name: "Generate Skeleton",
+			callback: () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				this.handleGenerateSkeleton(activeFile);
+			}
+		});
 
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file) => {
@@ -27,55 +32,73 @@ export default class SkeletonPlugin extends Plugin {
 		);
 	}
 
-	async handleGenerateSkeleton(file: any) {
-		const baseDir = (this.app.vault.adapter as FileSystemAdapter).getBasePath();
-		const skelDir = path.join(baseDir, this.settings.skelDir);
+	async handleGenerateSkeleton(file: TAbstractFile | null) {
+		const adapter = this.app.vault.adapter;
+		const skelDir = normalizePath(this.settings.skelDir);
 
-		// Check if skeleton directory exists
-		if (!fs.existsSync(skelDir)) {
+		if (skelDir.contains("..")) {
+			new Notice("Skeleton directory must be inside the vault.");
+			return;
+		}
+
+		if (!(await adapter.exists(skelDir))) {
 			const createDir = await showConfirmationDialog(
 				this.app,
 				"Skeleton Directory Not Found",
-				`The skeleton directory "${this.settings.skelDir}" doesn't exist. Would you like to create it?`
+				`The skeleton directory "${skelDir}" doesn't exist. Would you like to create it?`
 			);
 
 			if (createDir) {
 				try {
-					fs.mkdirSync(skelDir);
-					new Notice(`Created skeleton directory at ${this.settings.skelDir}`);
+					await adapter.mkdir(skelDir);
+					new Notice(`Created skeleton directory at ${skelDir}`);
 				} catch (error) {
-					new Notice(`Failed to create directory: ${error.message}`);
+					const msg = error instanceof Error ? error.message : String(error);
+					new Notice(`Failed to create directory: ${msg}`);
 					return;
 				}
 			} else {
-				new Notice("Operation cancelled");
 				return;
 			}
 		}
 
-		// Get subdirectories
-		const skeleton_dirs = fs
-			.readdirSync(skelDir)
-			.filter((dir) =>
-				fs.statSync(path.join(skelDir, dir)).isDirectory()
-			);
-
-		if (skeleton_dirs.length === 0) {
-			new Notice(`No skeleton directories found in ${this.settings.skelDir}. Please create at least one directory.`);
+		let listed;
+		try {
+			listed = await adapter.list(skelDir);
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			new Notice(`Failed to read skeleton directory: ${msg}`);
 			return;
 		}
 
-		let selectedPath = path.join(baseDir, file.path);
-		if (fs.statSync(selectedPath).isFile()) {
-			selectedPath = path.dirname(selectedPath);
+		if (listed.folders.length === 0) {
+			new Notice(
+				`No skeleton directories found in ${skelDir}. Please create at least one directory.`
+			);
+			return;
 		}
+
+		let selectedPath: string;
+		if (file) {
+			selectedPath = file instanceof TFile
+				? (file.parent?.path ?? "")
+				: file.path;
+		} else {
+			selectedPath = "";
+		}
+
+		const dirNames = listed.folders.map(
+			(f) => f.substring(f.lastIndexOf("/") + 1)
+		);
+
+		const excludePatterns = parseExcludePatterns(this.settings.excludePatterns);
 
 		new SkeletonModal(
 			this.app,
-			skeleton_dirs,
+			dirNames,
 			selectedPath,
-			this.settings.skelDir,
-			baseDir
+			skelDir,
+			excludePatterns
 		).open();
 	}
 

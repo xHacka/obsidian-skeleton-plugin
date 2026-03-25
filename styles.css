@@ -42,3 +42,19 @@ If your plugin does not need CSS, delete this file.
 .bulk-button {
     font-size: 12px;
 }
+
+.file-section {
+    margin-bottom: 16px;
+}
+
+.file-section-title-new {
+    color: var(--text-normal);
+}
+
+.file-section-title-existing {
+    color: var(--text-warning);
+}
+
+.file-entry-existing {
+    color: var(--text-warning);
+}

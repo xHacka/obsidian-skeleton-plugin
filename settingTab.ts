@@ -24,12 +24,29 @@ export class SkeletonSettingTab extends PluginSettingTab {
                 .setPlaceholder("_skel")
                 .setValue(this.plugin.settings.skelDir)
                 .onChange(async (value) => {
-                    if (!value.trim()) {
+                    const trimmed = value.trim();
+                    if (!trimmed) {
                         new Notice("Skeleton directory cannot be empty");
                         return;
                     }
+                    if (trimmed.includes("..") || trimmed.startsWith("/") || trimmed.startsWith("\\")) {
+                        new Notice("Skeleton directory must be a relative path within the vault (no '..' or leading slashes)");
+                        return;
+                    }
                     
-                    this.plugin.settings.skelDir = value.trim();
+                    this.plugin.settings.skelDir = trimmed;
+                    await this.plugin.saveSettings();
+                })
+            );
+
+        new Setting(containerEl)
+            .setName("Exclude Patterns")
+            .setDesc("Comma-separated file names or patterns to exclude from copies (e.g. .DS_Store, *.tmp)")
+            .addText(text => text
+                .setPlaceholder(".DS_Store, Thumbs.db, .gitkeep")
+                .setValue(this.plugin.settings.excludePatterns)
+                .onChange(async (value) => {
+                    this.plugin.settings.excludePatterns = value;
                     await this.plugin.saveSettings();
                 })
             );
